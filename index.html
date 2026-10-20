@@ -151,6 +151,21 @@ tr.confirming td { background: var(--expense-soft); }
 .banner { background: var(--surface-2); border-radius: var(--radius); padding: 10px 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 0.9rem; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; z-index: 10; }
 
+.auth {
+  position: fixed; inset: 0; z-index: 20; background: var(--bg); display: grid; place-items: center; overflow-y: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: calc(24px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.auth-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display: grid; gap: 16px; }
+.auth-card h1 { font-size: 1.25rem; }
+#authForm { display: grid; gap: 14px; }
+#authForm .seg { justify-self: start; }
+#authForm .primary { padding-block: 10px; }
+.account-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.acc-email { font-weight: 600; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sync { font-size: 0.8rem; color: var(--muted); }
+.sync.bad { color: var(--expense); }
+
 @media (max-width: 860px) {
   .grid2, .cats { grid-template-columns: minmax(0, 1fr); }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -167,9 +182,13 @@ tr.confirming td { background: var(--expense-soft); }
   <header>
     <div>
       <h1>Учёт доходов и расходов</h1>
-      <p>Все суммы в узбекских сумах. Данные хранятся в этом браузере.</p>
+      <p id="subtitle">Все суммы в узбекских сумах. Данные хранятся в этом браузере.</p>
     </div>
     <div class="controls">
+      <div id="account" hidden>
+        <span class="lbl">Аккаунт</span>
+        <div class="account-row"><span id="accEmail" class="acc-email"></span><span id="syncState" class="sync" role="status"></span><button type="button" id="logoutBtn">Выйти</button></div>
+      </div>
       <div>
         <span class="lbl" id="themeLbl">Тема</span>
         <div class="seg" role="group" aria-labelledby="themeLbl">
@@ -366,6 +385,23 @@ tr.confirming td { background: var(--expense-soft); }
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="auth" id="auth">
+  <div class="auth-card">
+    <h1>Учёт доходов и расходов</h1>
+    <p class="muted" id="authLoading" style="margin:0">Загрузка…</p>
+    <form id="authForm" novalidate hidden>
+      <p class="muted" style="margin:0">Войдите, чтобы ваши записи хранились в аккаунте и были доступны с любого устройства.</p>
+      <div class="seg" role="group" aria-label="Вход или регистрация">
+        <button type="button" data-auth="login" aria-pressed="true">Вход</button>
+        <button type="button" data-auth="register" aria-pressed="false">Регистрация</button>
+      </div>
+      <div><label class="lbl" for="authEmail">Почта</label><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
+      <div><label class="lbl" for="authPassword">Пароль</label><input id="authPassword" type="password" autocomplete="current-password"><div class="note" id="authHint" hidden>Не короче 8 символов.</div></div>
+      <div class="err" id="authErr" role="alert"></div>
+      <button type="submit" class="primary" id="authSubmit">Войти</button>
+    </form>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
@@ -433,7 +469,7 @@ tr.confirming td { background: var(--expense-soft); }
     }
     return d;
   }
-  function load() {
+  function readLocal() {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
@@ -444,13 +480,17 @@ tr.confirming td { background: var(--expense-soft); }
         }
       }
     } catch (e) {}
-    return demoData();
+    return null;
   }
+  function load() { return readLocal() || demoData(); }
+  // Local mode writes to this browser; account mode sends the state to the server.
   function save() {
+    if (mode === "cloud") { scheduleSync(); return; }
+    if (mode !== "local") return;
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
   }
-  let state = load();
-  save();
+  let mode = "boot";
+  let state = defaults();
 
   // ---------- UI state ----------
   let formType = "expense";
@@ -1204,6 +1244,164 @@ tr.confirming td { background: var(--expense-soft); }
   try { savedTheme = localStorage.getItem(THEME_KEY) || "auto"; } catch (e) {}
   applyTheme(savedTheme);
 
+  // ---------- Account and sync ----------
+  // "local": no server (preview or opened as a file), data stays in this browser.
+  // "cloud": the API answered, data lives in the signed-in account.
+  const authEl = $("auth");
+  let authMode = "login";
+  let syncTimer = null, syncing = false, dirty = false;
+
+  async function api(path, method = "GET", body) {
+    const opts = { method, credentials: "same-origin", headers: {} };
+    if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+    const r = await fetch(path, opts);
+    let data = null;
+    try { data = await r.json(); } catch (e) {}
+    return { status: r.status, data };
+  }
+  function setSync(text, bad) {
+    const el = $("syncState");
+    el.textContent = text;
+    el.classList.toggle("bad", !!bad);
+  }
+  function scheduleSync() {
+    dirty = true;
+    setSync("Сохранение…");
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushSync, 600);
+  }
+  async function pushSync() {
+    if (syncing) { clearTimeout(syncTimer); syncTimer = setTimeout(pushSync, 300); return; }
+    syncing = true; dirty = false;
+    try {
+      const r = await api("/api/data", "PUT", { data: state });
+      if (r.status === 200) { if (!dirty) setSync("Сохранено"); }
+      else if (r.status === 401) { dirty = true; setSync("Не сохранено", true); showAuth("Сессия истекла. Войдите снова, несохранённые изменения не пропадут."); }
+      else throw new Error((r.data && r.data.error) || "HTTP " + r.status);
+    } catch (e) {
+      dirty = true;
+      setSync("Не сохранено, повторю…", true);
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(pushSync, 5000);
+    } finally { syncing = false; }
+  }
+  window.addEventListener("beforeunload", () => {
+    if (mode !== "cloud" || !dirty) return;
+    try { fetch("/api/data", { method: "PUT", keepalive: true, credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: state }) }); } catch (e) {}
+  });
+
+  function showAuth(msg) {
+    $("authLoading").hidden = true;
+    $("authForm").hidden = false;
+    authEl.hidden = false;
+    $("authErr").textContent = msg || "";
+    $("authEmail").focus();
+  }
+  function showAuthLoading(text) {
+    authEl.hidden = false;
+    $("authForm").hidden = true;
+    $("authLoading").hidden = false;
+    $("authLoading").textContent = text;
+  }
+  function setAuthMode(m) {
+    authMode = m;
+    document.querySelectorAll("[data-auth]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.auth === m)));
+    $("authSubmit").textContent = m === "login" ? "Войти" : "Создать аккаунт";
+    $("authPassword").setAttribute("autocomplete", m === "login" ? "current-password" : "new-password");
+    $("authHint").hidden = m === "login";
+    $("authErr").textContent = "";
+  }
+  document.querySelectorAll("[data-auth]").forEach((b) => b.addEventListener("click", () => setAuthMode(b.dataset.auth)));
+
+  $("authForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const email = $("authEmail").value.trim(), password = $("authPassword").value;
+    if (!email || !password) { $("authErr").textContent = "Введите почту и пароль."; return; }
+    if (authMode === "register" && password.length < 8) { $("authErr").textContent = "Пароль должен быть не короче 8 символов."; return; }
+    const btn = $("authSubmit"), label = btn.textContent;
+    btn.disabled = true; btn.textContent = "Подождите…"; $("authErr").textContent = "";
+    try {
+      const r = await api(authMode === "login" ? "/api/login" : "/api/register", "POST", { email, password });
+      if (r.status === 200 || r.status === 201) {
+        $("authPassword").value = "";
+        await enterCloud(r.data.email, dirty);
+        if (r.status === 201) toast("Аккаунт создан");
+      } else {
+        $("authErr").textContent = (r.data && r.data.error) || "Не получилось. Попробуйте ещё раз.";
+      }
+    } catch (e) {
+      $("authErr").textContent = "Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.";
+    } finally { btn.disabled = false; btn.textContent = label; }
+  });
+
+  // Data from this browser that is the user's own, not the sample records.
+  function ownLocalData() {
+    const s = readLocal();
+    if (!s) return null;
+    s.entries = s.entries.filter((e) => !e.demo);
+    const sv = s.savings;
+    sv.ops = sv.ops.filter((o) => !o.demo);
+    sv.goals = sv.goals.filter((g) => !g.demo || sv.ops.some((o) => o.goalId === g.id));
+    if (!sv.goals.some((g) => g.id === sv.rule.goalId)) { sv.rule.enabled = false; sv.rule.goalId = null; }
+    s.demo = false;
+    return s.entries.length || sv.ops.length || sv.goals.length ? s : null;
+  }
+
+  async function enterCloud(email, keepCurrent) {
+    mode = "cloud";
+    $("accEmail").textContent = email;
+    $("account").hidden = false;
+    $("subtitle").textContent = "Все суммы в узбекских сумах. Данные хранятся в вашем аккаунте.";
+    if (keepCurrent) { authEl.hidden = true; scheduleSync(); return; }
+    showAuthLoading("Загружаю ваши данные…");
+    const r = await api("/api/data");
+    if (r.status !== 200) { showAuth((r.data && r.data.error) || "Не удалось загрузить данные. Обновите страницу."); return; }
+    if (r.data.data) {
+      state = r.data.data;
+      if (!state.savings) state.savings = defaultSavings();
+      setSync("Сохранено");
+    } else {
+      const local = ownLocalData();
+      state = local || defaults();
+      scheduleSync();
+      if (local) toast("Записи из этого браузера перенесены в аккаунт");
+    }
+    authEl.hidden = true;
+    resetForm(); resetOpForm(); renderAll();
+  }
+
+  $("logoutBtn").addEventListener("click", async () => {
+    if (dirty) { clearTimeout(syncTimer); await pushSync(); }
+    try { await api("/api/logout", "POST", {}); } catch (e) {}
+    dirty = false;
+    state = defaults();
+    $("account").hidden = true;
+    resetForm(); resetOpForm(); renderAll();
+    setAuthMode("login");
+    showAuth();
+  });
+
+  function startLocal() {
+    mode = "local";
+    state = load();
+    save();
+    authEl.hidden = true;
+    resetForm(); resetOpForm(); renderAll();
+  }
+  async function boot() {
+    let r = null;
+    try { r = await api("/api/me"); } catch (e) {}
+    const fromApi = r && r.data && typeof r.data === "object" && ("email" in r.data || "error" in r.data);
+    if (!fromApi) return startLocal();
+    mode = "cloud";
+    setAuthMode("login");
+    if (r.status === 200) {
+      try { await enterCloud(r.data.email); } catch (e) { showAuth("Нет связи с сервером. Обновите страницу."); }
+    } else {
+      showAuth(r.status === 401 ? "" : r.data.error);
+    }
+  }
+
   // ---------- Wiring ----------
   $("period").addEventListener("change", () => { confirmId = null; opConfirmId = null; renderStats(); renderSavings(); renderCharts(); renderRows(); });
   ["fType", "fCat"].forEach((id) => $(id).addEventListener("change", renderRows));
@@ -1221,5 +1419,6 @@ tr.confirming td { background: var(--expense-soft); }
   resetOpForm();
   showView(location.hash === "#savings" ? "savings" : "dash");
   renderAll();
+  boot();
 })();
 </script>
