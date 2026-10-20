@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* shadcn theme tokens, tuned to the tracker's dark green palette */
+@layer base {
+  :root {
+    --background: 150 18% 5%;
+    --foreground: 140 20% 94%;
+    --card: 148 14% 9%;
+    --card-foreground: 140 20% 94%;
+    --primary: 153 55% 63%;
+    --primary-foreground: 150 18% 5%;
+    --secondary: 148 12% 15%;
+    --secondary-foreground: 140 20% 94%;
+    --muted: 148 12% 13%;
+    --muted-foreground: 145 9% 68%;
+    --accent: 148 12% 17%;
+    --accent-foreground: 140 20% 94%;
+    --border: 148 12% 18%;
+    --input: 148 12% 22%;
+    --ring: 153 55% 63%;
+    --income: 151 60% 57%;
+    --expense: 12 100% 70%;
+    --save: 226 100% 80%;
+    --radius: 0.85rem;
+    color-scheme: dark;
+  }
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+  h1, h2, h3 { @apply font-display; text-wrap: balance; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
