@@ -22,21 +22,30 @@
   --expense-soft: #f8e1da;
   --save: #3b5ba5;
   --save-soft: #e3e9f7;
+  --control: #ffffff;
+  --control-hover: #eef2ee;
+  --line-strong: #b7c4bb;
+  --accent-ink: #ffffff;
+  --shadow: 0 1px 2px rgba(20, 40, 30, .06), 0 8px 24px -12px rgba(20, 40, 30, .18);
   --font-display: "Unbounded", "Golos Text", system-ui, sans-serif;
   --font-body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius: 12px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #111613; --surface: #1a211d; --surface-2: #232c27; --fg: #e7ede9; --muted: #9aa9a0;
-    --line: #2f3a34; --accent: #7cc8a8; --income: #4cc58d; --expense: #f07a5e;
-    --income-soft: #1d3a2b; --expense-soft: #42241d; --save: #93abf0; --save-soft: #222b44; color-scheme: dark;
+    --bg: #0c110e; --surface: #151c18; --surface-2: #1f2823; --fg: #edf3ef; --muted: #a8b6ae;
+    --line: #29342e; --accent: #6fd3a8; --income: #4fd394; --expense: #ff8566;
+    --income-soft: #173828; --expense-soft: #40211a; --save: #9bb3ff; --save-soft: #1f2947;
+    --control: #24302a; --control-hover: #2e3c35; --line-strong: #4a5a51; --accent-ink: #0c110e;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #111613; --surface: #1a211d; --surface-2: #232c27; --fg: #e7ede9; --muted: #9aa9a0;
-  --line: #2f3a34; --accent: #7cc8a8; --income: #4cc58d; --expense: #f07a5e;
-  --income-soft: #1d3a2b; --expense-soft: #42241d; --save: #93abf0; --save-soft: #222b44; color-scheme: dark;
+  --bg: #0c110e; --surface: #151c18; --surface-2: #1f2823; --fg: #edf3ef; --muted: #a8b6ae;
+  --line: #29342e; --accent: #6fd3a8; --income: #4fd394; --expense: #ff8566;
+  --income-soft: #173828; --expense-soft: #40211a; --save: #9bb3ff; --save-soft: #1f2947;
+  --control: #24302a; --control-hover: #2e3c35; --line-strong: #4a5a51; --accent-ink: #0c110e;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7); color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -59,12 +68,13 @@ span.lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em
 label.lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); display: block; margin-bottom: 4px; }
 input, select, button { font: inherit; color: inherit; }
 input, select {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0;
+  background: var(--control); border: 1px solid var(--line-strong); transition: border-color .15s; border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0;
 }
 input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button { cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; }
-button:hover { background: var(--surface-2); }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+button { cursor: pointer; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--control); padding: 8px 14px; font-weight: 500; transition: background .15s, border-color .15s, transform .1s, box-shadow .15s; }
+button:hover { background: var(--control-hover); border-color: var(--muted); }
+button:active { transform: scale(.97); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; box-shadow: 0 4px 14px -6px var(--accent); }
 button.primary:hover { filter: brightness(1.08); }
 button.ghost { border-color: transparent; background: transparent; padding: 6px 8px; color: var(--muted); }
 button.ghost:hover { color: var(--fg); background: var(--surface-2); }
@@ -76,7 +86,11 @@ button.danger { color: var(--expense); }
 .tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; background: transparent; padding: 10px 16px; margin-bottom: -1px; color: var(--muted); font-weight: 500; white-space: nowrap; }
 .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
 .tab-badge { margin-left: 8px; font-size: 0.8rem; color: var(--save); font-weight: 600; }
-.stat { background: var(--surface); border-radius: var(--radius); padding: 16px 18px; border: 1px solid var(--line); }
+.stat { background: var(--surface); border-radius: var(--radius); padding: 16px 18px; border: 1px solid var(--line); box-shadow: var(--shadow); transition: transform .2s; }
+.stat:hover { transform: translateY(-2px); }
+.stat.inc { background: linear-gradient(160deg, var(--income-soft), var(--surface) 65%); }
+.stat.exp { background: linear-gradient(160deg, var(--expense-soft), var(--surface) 65%); }
+.stat.sav { background: linear-gradient(160deg, var(--save-soft), var(--surface) 65%); }
 .stat .lbl { margin: 0; }
 .stat .val { font-family: var(--font-display); font-size: clamp(1.1rem, 2.6vw, 1.6rem); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat .sub { font-size: 0.85rem; color: var(--muted); }
@@ -85,22 +99,23 @@ button.danger { color: var(--expense); }
 .stat.sav .val { color: var(--save); }
 
 .grid2 { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; display: grid; gap: 14px; align-content: start; }
+.panel { box-shadow: var(--shadow); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; display: grid; gap: 14px; align-content: start; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .chart-box { position: relative; height: 280px; }
 .empty { color: var(--muted); text-align: center; padding: 30px 10px; }
 
-.seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; gap: 2px; }
-.seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 7px; color: var(--muted); }
-.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
-.seg button[data-type="income"][aria-pressed="true"] { color: var(--income); }
-.seg button[data-type="expense"][aria-pressed="true"] { color: var(--expense); }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 7px; color: var(--fg); opacity: .75; }
+.seg button:hover { background: var(--control-hover); opacity: 1; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); opacity: 1; font-weight: 600; box-shadow: 0 2px 8px -3px var(--accent); }
+.seg button[data-type="income"][aria-pressed="true"] { background: var(--income); color: var(--accent-ink); }
+.seg button[data-type="expense"][aria-pressed="true"] { background: var(--expense); color: var(--accent-ink); }
 
 form.entry-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 form.entry-form .full { grid-column: 1 / -1; }
 .hint { font-size: 0.85rem; color: var(--save); }
-.seg button[data-type="deposit"][aria-pressed="true"] { color: var(--save); }
-.seg button[data-type="withdraw"][aria-pressed="true"] { color: var(--expense); }
+.seg button[data-type="deposit"][aria-pressed="true"] { background: var(--save); color: var(--accent-ink); }
+.seg button[data-type="withdraw"][aria-pressed="true"] { background: var(--expense); color: var(--accent-ink); }
 .goals { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
 .goal { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; background: var(--bg); align-content: start; min-width: 0; }
 .goal.confirming { background: var(--expense-soft); }
@@ -108,7 +123,7 @@ form.entry-form .full { grid-column: 1 / -1; }
 .goal-bal { font-family: var(--font-display); font-size: 1.15rem; color: var(--save); }
 .goal .sub { font-size: 0.82rem; color: var(--muted); }
 .progress { height: 12px; background: var(--surface-2); border-radius: 999px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.15); }
-.progress > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--save) 65%, #fff), var(--save) 60%, color-mix(in srgb, var(--save) 80%, #000)); }
+.progress > span { transition: width .8s cubic-bezier(.2,.8,.2,1); display: block; height: 100%; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--save) 65%, #fff), var(--save) 60%, color-mix(in srgb, var(--save) 80%, #000)); }
 .goal-actions { display: flex; flex-wrap: wrap; gap: 0; margin-left: -6px; }
 .goal-actions button { padding: 4px 6px; font-size: 0.9rem; }
 .goal-form { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 8px; align-items: end; }
@@ -175,6 +190,10 @@ tr.confirming td { background: var(--expense-soft); }
   form.entry-form, .goal-form { grid-template-columns: minmax(0, 1fr); }
   .col-note { display: none; }
 }
+@keyframes rise { from { transform: translateY(10px); opacity: .2; } }
+.view:not([hidden]) .stat, .view:not([hidden]) .panel { animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
+.view .stat:nth-child(2) { animation-delay: .05s; } .view .stat:nth-child(3) { animation-delay: .1s; } .view .stat:nth-child(4) { animation-delay: .15s; }
+.view .grid2 .panel:nth-child(2) { animation-delay: .1s; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
@@ -531,11 +550,11 @@ tr.confirming td { background: var(--expense-soft); }
     const ops = state.savings.ops.filter(inPeriod);
     const saved = ops.reduce((a, o) => a + (o.type === "deposit" ? o.amount : -o.amount), 0);
     const bal = ti - te - saved;
-    $("sSaved").textContent = sum(saved);
+    setNum("sSaved", saved, sum);
     $("sSavedSub").textContent = ti > 0 ? Math.round((saved / ti) * 100) + "% дохода" : "Доходов за период нет";
-    $("sIncome").textContent = sum(ti);
-    $("sExpense").textContent = sum(te);
-    $("sBalance").textContent = (bal > 0 ? "+" : "") + sum(bal);
+    setNum("sIncome", ti, sum);
+    setNum("sExpense", te, sum);
+    setNum("sBalance", bal, sum, bal > 0 ? "+" : "");
     $("sBalance").style.color = bal < 0 ? "var(--expense)" : "var(--fg)";
     $("sIncomeN").textContent = plural(inc.length, "запись", "записи", "записей");
     $("sExpenseN").textContent = plural(exp.length, "запись", "записи", "записей");
@@ -572,7 +591,7 @@ tr.confirming td { background: var(--expense-soft); }
         const meta = chart.getDatasetMeta(di);
         if (meta.hidden || meta.type !== "bar") return;
         meta.data.forEach((el) => {
-          const { x, y, base, width } = el.getProps(["x", "y", "base", "width"], true);
+          const { x, y, base, width } = el.getProps(["x", "y", "base", "width"]);
           if (Math.abs(base - y) < 0.5) return;
           const l = x - width / 2, r = x + width / 2, d = BAR_DEPTH(width), dy = d * 0.75;
           ctx.beginPath();
@@ -599,7 +618,7 @@ tr.confirming td { background: var(--expense-soft); }
       for (let k = depth; k >= 1; k--) {
         meta.data.forEach((arc, i) => {
           if (!chart.getDataVisibility(i)) return;
-          const p = arc.getProps(["x", "y", "startAngle", "endAngle", "innerRadius", "outerRadius"], true);
+          const p = arc.getProps(["x", "y", "startAngle", "endAngle", "innerRadius", "outerRadius"]);
           ctx.beginPath();
           ctx.arc(p.x, p.y + k, p.outerRadius, p.startAngle, p.endAngle);
           ctx.arc(p.x, p.y + k, p.innerRadius, p.endAngle, p.startAngle, true);
@@ -611,6 +630,23 @@ tr.confirming td { background: var(--expense-soft); }
       ctx.restore();
     }
   };
+
+  const reduceMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+  const chartAnim = () => (reduceMotion() ? false : { duration: 900, easing: "easeOutQuart" });
+  // Counts a stat up from its previous value.
+  function setNum(id, value, format, prefix) {
+    const el = $(id), from = el._v || 0, pre = prefix || "";
+    el._v = value;
+    if (reduceMotion() || from === value) { el.textContent = pre + format(value); return; }
+    const t0 = performance.now(), dur = 700;
+    cancelAnimationFrame(el._raf);
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = pre + format(from + (value - from) * e);
+      if (k < 1) el._raf = requestAnimationFrame(step);
+    };
+    el._raf = requestAnimationFrame(step);
+  }
 
   function lastMonths(n) {
     const p = $("period").value;
@@ -655,7 +691,7 @@ tr.confirming td { background: var(--expense-soft); }
         ]
       },
       options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
+        responsive: true, maintainAspectRatio: false, animation: chartAnim(),
         layout: { padding: { top: 12, right: 12 } },
         plugins: { legend: legend3d(fg), tooltip: { callbacks: { label: (c) => " " + c.dataset.label + ": " + sum(c.parsed.y) } } },
         scales: {
@@ -688,7 +724,7 @@ tr.confirming td { background: var(--expense-soft); }
       data: barData,
       plugins: [bar3d],
       options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
+        responsive: true, maintainAspectRatio: false, animation: chartAnim(),
         layout: { padding: { top: 12, right: 12 } },
         plugins: {
           legend: legend3d(fg),
@@ -715,7 +751,7 @@ tr.confirming td { background: var(--expense-soft); }
         plugins: [pie3d],
         data: { labels: cats.map((c) => c[0]), datasets: [{ data: cats.map((c) => c[1]), backgroundColor: cats.map((_, i) => PIE_COLORS[i % PIE_COLORS.length]), borderColor: cats.map((_, i) => shade(PIE_COLORS[i % PIE_COLORS.length], 0.25)), borderWidth: 1, hoverOffset: 6 }] },
         options: {
-          responsive: true, maintainAspectRatio: false, animation: false, cutout: "55%",
+          responsive: true, maintainAspectRatio: false, animation: chartAnim(), cutout: "55%",
           layout: { padding: { top: 6, bottom: 16 } },
           plugins: {
             legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10 } },
@@ -976,11 +1012,11 @@ tr.confirming td { background: var(--expense-soft); }
     const income = state.entries.filter((e) => inPeriod(e) && e.type === "income").reduce((a, e) => a + e.amount, 0);
     const total = totalSaved();
     $("tabSaved").textContent = total ? sum(total) : "";
-    $("svTotal").textContent = sum(total);
+    setNum("svTotal", total, sum);
     $("svGoalsN").textContent = sv.goals.length ? "в " + plural(sv.goals.length, "копилке", "копилках", "копилках") : "копилок нет";
-    $("svIn").textContent = sum(tin);
+    setNum("svIn", tin, sum);
     $("svInN").textContent = plural(dep.length, "операция", "операции", "операций");
-    $("svOut").textContent = sum(tout);
+    setNum("svOut", tout, sum);
     $("svOutN").textContent = plural(wd.length, "операция", "операции", "операций");
     $("svRate").textContent = income > 0 ? Math.round(((tin - tout) / income) * 100) + "%" : "—";
     $("svRateSub").textContent = income > 0 ? "из дохода " + sum(income) : "доходов за период нет";
